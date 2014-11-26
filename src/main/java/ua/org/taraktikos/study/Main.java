@@ -1,3 +1,5 @@
+package ua.org.taraktikos.study;
+
 import java.sql.*;
 
 public class Main {
