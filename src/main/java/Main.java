@@ -1,19 +1,32 @@
-import java.sql.Connection;
-import java.sql.SQLException;
-import java.util.Properties;
-import org.postgresql.Driver;
+import java.sql.*;
 
 public class Main {
 
     public static void main(String[] args) {
-        Driver driver = new Driver();
-        Properties properties = new Properties();
-        properties.setProperty("user", "study");
-        properties.setProperty("password", "study");
+        String driver = "org.postgresql.Driver";
+        String url = "jdbc:postgresql://localhost/study00";
+        String user = "study";
+        String password = "study";
+        Connection connection = null;
         try {
-            Connection connection = driver.connect("jdbc:postgresql://localhost/study00", properties);
-        } catch (SQLException e) {
+            Class.forName(driver);
+            connection = DriverManager.getConnection(url, user, password);
+            Statement statement = connection.createStatement();
+            ResultSet result = statement.executeQuery("SELECT VERSION()");
+            while (result.next()) {
+                System.out.println(result.toString());
+            }
+        } catch (Exception e) {
             System.out.println(e.getMessage());
+            return;
+        } finally {
+            try {
+                if (connection != null) {
+                    connection.close();
+                }
+            } catch (Exception e) {
+                System.out.println(e.getMessage());
+            }
         }
         System.out.println("Done");
     }
