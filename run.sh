@@ -9,3 +9,4 @@ psql -U postgres -h $host -c "CREATE DATABASE $db;"
 psql -U postgres -h $host -c "DROP user IF EXISTS $user;"
 psql -U postgres -h $host -c "CREATE USER $user WITH PASSWORD '$password';"
 psql -U postgres -h $host -c "GRANT ALL PRIVILEGES ON DATABASE $db to $user;"
+psql -U postgres -h $host -d $db  -f ./src/sql/schema.sql

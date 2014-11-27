@@ -1,0 +1,44 @@
+DROP TABLE IF EXISTS country;
+CREATE TABLE country
+(
+    id SERIAL PRIMARY KEY NOT NULL,
+    name VARCHAR(200) NOT NULL,
+    code VARCHAR(2) NOT NULL,
+    long_code VARCHAR(20) NOT NULL,
+    postcode_id INT NOT NULL
+);
+ALTER TABLE country
+ ADD CONSTRAINT unique_code UNIQUE (code);
+ALTER TABLE country
+ ADD CONSTRAINT unique_long_code UNIQUE (long_code);
+
+DROP TABLE IF EXISTS city;
+CREATE TABLE city
+(
+    id SERIAL PRIMARY KEY NOT NULL,
+    name VARCHAR(200) NOT NULL,
+    latitude DOUBLE PRECISION NOT NULL,
+    longitude DOUBLE PRECISION NOT NULL,
+    accuracy INT NOT NULL,
+    region_id INT NOT NULL
+);
+
+DROP TABLE IF EXISTS region;
+CREATE TABLE region
+(
+    id SERIAL PRIMARY KEY NOT NULL,
+    name VARCHAR(200) NOT NULL,
+    code VARCHAR(20) NOT NULL,
+    country_id INT NOT NULL
+);
+ALTER TABLE region
+ ADD CONSTRAINT unique_name_code UNIQUE (name, code);
+
+DROP TABLE IF EXISTS postcode;
+CREATE TABLE postcode
+(
+    id SERIAL PRIMARY KEY NOT NULL,
+    name VARCHAR(200) NOT NULL
+);
+ALTER TABLE postcode
+ ADD CONSTRAINT unique_name UNIQUE (name);

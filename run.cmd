@@ -8,3 +8,4 @@ psql -U postgres -c "CREATE DATABASE %db%;"
 psql -U postgres -c "DROP user IF EXISTS %user%;"
 psql -U postgres -c "CREATE USER %user% WITH PASSWORD '%password%';"
 psql -U postgres -c "GRANT ALL PRIVILEGES ON DATABASE %db% to %user%;"
+psql -U postgres -d %db% -f ./src/sql/schema.sql
