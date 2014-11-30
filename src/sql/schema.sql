@@ -8,7 +8,7 @@ CREATE TABLE country
     postcode_id INT NOT NULL
 );
 ALTER TABLE country
- ADD CONSTRAINT unique_code UNIQUE (code);
+ ADD CONSTRAINT unique_name_code UNIQUE (name, code);
 ALTER TABLE country
  ADD CONSTRAINT unique_long_code UNIQUE (long_code);
 

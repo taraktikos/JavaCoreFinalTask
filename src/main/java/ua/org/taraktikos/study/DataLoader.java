@@ -3,9 +3,7 @@ package ua.org.taraktikos.study;
 import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.Statement;
+import java.sql.*;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -25,16 +23,77 @@ public class DataLoader {
         return load(inputStream, false);
     }
 
-    int getPostCodeId(String name) {
+    int getPostCodeId(Map<String, String> map) throws SQLException {
         String query = "SELECT id FROM postcode WHERE name = ?";
-        try {
-            PreparedStatement ps = connection.prepareStatement(query);
-            ps.setString(1, name);
-            ps.execute();
-        } catch (Exception e) {
-            System.out.println(e.getMessage());
+        PreparedStatement ps = connection.prepareStatement(query);
+        ps.setString(1, map.get("postalCode"));
+        ResultSet rs = ps.executeQuery();
+        if (rs.next()) {
+            return rs.getInt("id");
         }
-        return -1;
+        query = "INSERT INTO postcode (name) values (?)";
+        ps = connection.prepareStatement(query, Statement.RETURN_GENERATED_KEYS);
+        ps.setString(1, map.get("postalCode"));
+        int affectedRows = ps.executeUpdate();
+        if (affectedRows == 0) {
+            throw new SQLException("Creating postcode fail, no rows affected.");
+        }
+        rs = ps.getGeneratedKeys();
+        if (rs.next()) {
+            return rs.getInt(1);
+        }
+        throw new SQLException("Creating postcode fail, no id obtained.");
+    }
+
+    int getCountryId(Map<String, String> map) throws SQLException {
+        String query = "SELECT id FROM country WHERE name = ? AND code = ?";
+        PreparedStatement ps = connection.prepareStatement(query);
+        ps.setString(1, map.get("countryName"));
+        ps.setString(2, map.get("countryCode"));
+        ResultSet rs = ps.executeQuery();
+        if (rs.next()) {
+            return rs.getInt("id");
+        }
+        query = "INSERT INTO country (name, code, long_code, postcode_id) values (?, ?, ?, ?)";
+        ps = connection.prepareStatement(query, Statement.RETURN_GENERATED_KEYS);
+        ps.setString(1, map.get("countryName"));
+        ps.setString(2, map.get("countryCode"));
+        ps.setString(3, map.get("longCountryCode"));
+        ps.setInt(4, getPostCodeId(map));
+        int affectedRows = ps.executeUpdate();
+        if (affectedRows == 0) {
+            throw new SQLException("Creating region fail, no rows affected.");
+        }
+        rs = ps.getGeneratedKeys();
+        if (rs.next()) {
+            return rs.getInt(1);
+        }
+        throw new SQLException("Creating region fail, no id obtained.");
+    }
+
+    int getRegionId(Map<String, String> map) throws SQLException {
+        String query = "SELECT id FROM region WHERE name = ? AND code = ?";
+        PreparedStatement ps = connection.prepareStatement(query);
+        ps.setString(1, map.get("regionName"));
+        ps.setString(2, map.get("regionCode"));
+        ResultSet rs = ps.executeQuery();
+        if (rs.next()) {
+            return rs.getInt("id");
+        }
+        query = "INSERT INTO region (name, code, country_id) values (?, ?, ?)";
+        ps = connection.prepareStatement(query, Statement.RETURN_GENERATED_KEYS);
+        ps.setString(1, map.get("regionName"));
+        ps.setString(2, map.get("regionCode"));
+        ps.setInt(3, getCountryId(map));
+        int affectedRows = ps.executeUpdate();
+        if (affectedRows == 0) {
+            throw new SQLException("Creating region fail, no rows affected.");
+        }
+        rs = ps.getGeneratedKeys();
+        if (rs.next()) {
+            return rs.getInt(1);
+        }
+        throw new SQLException("Creating region fail, no id obtained.");
     }
 
     int load(InputStream input, boolean truncateBeforeLoad) throws Exception {
@@ -43,14 +102,37 @@ public class DataLoader {
         }
         BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(input));
         String line;
-        String query = "INSERT INTO postcode (name) values (?)";
+        String query = "INSERT INTO city (name, latitude, longitude, accuracy, region_id) values (?, ?, ?, ?, ?)";
         int count = 0;
         PreparedStatement ps = null;
         try {
+            if (truncateBeforeLoad) {
+                Statement statement = connection.createStatement();
+                statement.executeUpdate("DELETE FROM city");
+                statement.executeUpdate("DELETE FROM region");
+                statement.executeUpdate("DELETE FROM country");
+                statement.executeUpdate("DELETE FROM postcode");
+                statement.close();
+            }
             ps = connection.prepareStatement(query);
             while ((line = bufferedReader.readLine()) != null) {
                 Map<String, String> map = parseLine(line);
-                ps.setString(1, map.get("postalCode"));
+                //System.out.println(map);
+                int regionId = getRegionId(map);
+                String selectQuery = "SELECT id FROM city WHERE name = ? AND region_id = ?";
+                PreparedStatement statement = connection.prepareStatement(selectQuery);
+                statement.setString(1, map.get("cityName"));
+                statement.setInt(2, regionId);
+                ResultSet rs = statement.executeQuery();
+                if (rs.next()) {
+                    System.out.println("City " + map.get("cityName") + "already exist");
+                    continue;
+                }
+                ps.setString(1, map.get("cityName"));
+                ps.setDouble(2, Double.parseDouble(map.get("latitude")));
+                ps.setDouble(3, Double.parseDouble(map.get("longitude")));
+                ps.setInt(4, Integer.parseInt(map.get("accuracy")));
+                ps.setInt(5, regionId);
                 ps.addBatch();
                 if (++count % batchSize == 0) {
                     ps.executeBatch();
@@ -67,80 +149,6 @@ public class DataLoader {
             }
         }
         return count;
-        /*CSVReader csvReader = null;
-
-
-        String[] headerRow = csvReader.readNext();
-
-        if (null == headerRow) {
-            throw new FileNotFoundException(
-                    "No columns defined in given CSV file." +
-                            "Please check the CSV file format.");
-        }
-
-        String questionmarks = StringUtils.repeat("?,", headerRow.length);
-        questionmarks = (String) questionmarks.subSequence(0, questionmarks
-                .length() - 1);
-
-        String query = SQL_INSERT.replaceFirst(TABLE_REGEX, tableName);
-        query = query
-                .replaceFirst(KEYS_REGEX, StringUtils.join(headerRow, ","));
-        query = query.replaceFirst(VALUES_REGEX, questionmarks);
-
-        System.out.println("Query: " + query);
-
-        String[] nextLine;
-        Connection con = null;
-        PreparedStatement ps = null;
-        try {
-            con = this.connection;
-            con.setAutoCommit(false);
-            ps = con.prepareStatement(query);
-
-            if(truncateBeforeLoad) {
-                //delete data from table before loading csv
-                con.createStatement().execute("DELETE FROM " + tableName);
-            }
-
-            final int batchSize = 1000;
-            int count = 0;
-            Date date = null;
-            while ((nextLine = csvReader.readNext()) != null) {
-
-                if (null != nextLine) {
-                    int index = 1;
-                    for (String string : nextLine) {
-                        date = DateUtil.convertToDate(string);
-                        if (null != date) {
-                            ps.setDate(index++, new java.sql.Date(date
-                                    .getTime()));
-                        } else {
-                            ps.setString(index++, string);
-                        }
-                    }
-                    ps.addBatch();
-                }
-                if (++count % batchSize == 0) {
-                    ps.executeBatch();
-                }
-            }
-            ps.executeBatch(); // insert remaining records
-            con.commit();
-        } catch (Exception e) {
-            con.rollback();
-            e.printStackTrace();
-            throw new Exception(
-                    "Error occured while loading data from file to database."
-                            + e.getMessage());
-        } finally {
-            if (null != ps)
-                ps.close();
-            if (null != con)
-                con.close();
-
-            csvReader.close();
-        }*/
-        //return false;
     }
 
     Map<String, String> parseLine(String line) {

@@ -17,12 +17,12 @@ public class Database {
     private Database() {
     }
 
-    Connection getConnection() throws Exception {
+    Connection getConnection() {
         InputStream inputStream = getClass().getClassLoader().getResourceAsStream("config.properties");
         Properties properties = new Properties();
-        properties.load(inputStream);
         Connection connection = null;
         try {
+            properties.load(inputStream);
             String url = "jdbc:postgresql://localhost/" + properties.getProperty("database");
             Class.forName(properties.getProperty("driver"));
             connection = DriverManager.getConnection(url, properties.getProperty("user"), properties.getProperty("password"));
