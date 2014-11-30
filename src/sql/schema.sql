@@ -4,8 +4,7 @@ CREATE TABLE country
     id SERIAL PRIMARY KEY NOT NULL,
     name VARCHAR(200) NOT NULL,
     code VARCHAR(2) NOT NULL,
-    long_code VARCHAR(20) NOT NULL,
-    postcode_id INT NOT NULL
+    long_code VARCHAR(20) NOT NULL
 );
 ALTER TABLE country
  ADD CONSTRAINT unique_name_code UNIQUE (name, code);
@@ -20,8 +19,11 @@ CREATE TABLE city
     latitude DOUBLE PRECISION NOT NULL,
     longitude DOUBLE PRECISION NOT NULL,
     accuracy INT NOT NULL,
-    region_id INT NOT NULL
+    region_id INT NOT NULL,
+    postcode_id INT NOT NULL
 );
+ALTER TABLE city
+ ADD CONSTRAINT unique_name_region_id_postcode_id UNIQUE (name, region_id, postcode_id);
 
 DROP TABLE IF EXISTS region;
 CREATE TABLE region

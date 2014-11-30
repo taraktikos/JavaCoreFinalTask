@@ -54,12 +54,11 @@ public class DataLoader {
         if (rs.next()) {
             return rs.getInt("id");
         }
-        query = "INSERT INTO country (name, code, long_code, postcode_id) values (?, ?, ?, ?)";
+        query = "INSERT INTO country (name, code, long_code) values (?, ?, ?)";
         ps = connection.prepareStatement(query, Statement.RETURN_GENERATED_KEYS);
         ps.setString(1, map.get("countryName"));
         ps.setString(2, map.get("countryCode"));
         ps.setString(3, map.get("longCountryCode"));
-        ps.setInt(4, getPostCodeId(map));
         int affectedRows = ps.executeUpdate();
         if (affectedRows == 0) {
             throw new SQLException("Creating region fail, no rows affected.");
@@ -102,7 +101,7 @@ public class DataLoader {
         }
         BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(input));
         String line;
-        String query = "INSERT INTO city (name, latitude, longitude, accuracy, region_id) values (?, ?, ?, ?, ?)";
+        String query = "INSERT INTO city (name, latitude, longitude, accuracy, region_id, postcode_id) values (?, ?, ?, ?, ?, ?)";
         int count = 0;
         PreparedStatement ps = null;
         try {
@@ -117,12 +116,14 @@ public class DataLoader {
             ps = connection.prepareStatement(query);
             while ((line = bufferedReader.readLine()) != null) {
                 Map<String, String> map = parseLine(line);
-                //System.out.println(map);
+//                //System.out.println(map);
                 int regionId = getRegionId(map);
-                String selectQuery = "SELECT id FROM city WHERE name = ? AND region_id = ?";
+                int postCodeId = getPostCodeId(map);
+                String selectQuery = "SELECT id FROM city WHERE name = ? AND region_id = ? AND postcode_id = ?";
                 PreparedStatement statement = connection.prepareStatement(selectQuery);
                 statement.setString(1, map.get("cityName"));
                 statement.setInt(2, regionId);
+                statement.setInt(3, postCodeId);
                 ResultSet rs = statement.executeQuery();
                 if (rs.next()) {
                     System.out.println("City " + map.get("cityName") + "already exist");
@@ -133,8 +134,10 @@ public class DataLoader {
                 ps.setDouble(3, Double.parseDouble(map.get("longitude")));
                 ps.setInt(4, Integer.parseInt(map.get("accuracy")));
                 ps.setInt(5, regionId);
+                ps.setInt(6, postCodeId);
                 ps.addBatch();
-                if (++count % batchSize == 0) {
+                count ++;
+                if (count % batchSize == 0) {
                     ps.executeBatch();
                 }
             }
