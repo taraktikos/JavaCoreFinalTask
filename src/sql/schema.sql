@@ -7,7 +7,7 @@ CREATE TABLE country
     long_code VARCHAR(20) NOT NULL
 );
 ALTER TABLE country
- ADD CONSTRAINT unique_name_code UNIQUE (name, code);
+ ADD CONSTRAINT unique_country_name_code UNIQUE (name, code);
 ALTER TABLE country
  ADD CONSTRAINT unique_long_code UNIQUE (long_code);
 
@@ -34,7 +34,7 @@ CREATE TABLE region
     country_id INT NOT NULL
 );
 ALTER TABLE region
- ADD CONSTRAINT unique_name_code UNIQUE (name, code);
+ ADD CONSTRAINT unique_region_name_code UNIQUE (name, code);
 
 DROP TABLE IF EXISTS postcode;
 CREATE TABLE postcode

@@ -7,9 +7,6 @@ import java.sql.*;
 import java.util.HashMap;
 import java.util.Map;
 
-/**
- * Created by taras on 28.11.14.
- */
 public class DataLoader {
 
     Connection connection;
@@ -107,16 +104,21 @@ public class DataLoader {
         try {
             if (truncateBeforeLoad) {
                 Statement statement = connection.createStatement();
-                statement.executeUpdate("DELETE FROM city");
-                statement.executeUpdate("DELETE FROM region");
-                statement.executeUpdate("DELETE FROM country");
-                statement.executeUpdate("DELETE FROM postcode");
+                statement.executeUpdate("TRUNCATE TABLE city");
+                statement.executeUpdate("TRUNCATE TABLE region");
+                statement.executeUpdate("TRUNCATE TABLE country");
+                statement.executeUpdate("TRUNCATE TABLE postcode");
                 statement.close();
             }
             ps = connection.prepareStatement(query);
+            Map<String, String> map;
             while ((line = bufferedReader.readLine()) != null) {
-                Map<String, String> map = parseLine(line);
-//                //System.out.println(map);
+                try {
+                    map = parseLine(line);
+                } catch (Exception e) {
+                    System.out.println("Incorrect line '" + line + "'");
+                    continue;
+                }
                 int regionId = getRegionId(map);
                 int postCodeId = getPostCodeId(map);
                 String selectQuery = "SELECT id FROM city WHERE name = ? AND region_id = ? AND postcode_id = ?";
@@ -126,7 +128,7 @@ public class DataLoader {
                 statement.setInt(3, postCodeId);
                 ResultSet rs = statement.executeQuery();
                 if (rs.next()) {
-                    System.out.println("City " + map.get("cityName") + "already exist");
+                    System.out.println("City " + map.get("cityName") + " already exist and skip.");
                     continue;
                 }
                 ps.setString(1, map.get("cityName"));
@@ -143,8 +145,7 @@ public class DataLoader {
             }
             ps.executeBatch();
         } catch (Exception e) {
-            System.out.println(e.getMessage());
-            e.getStackTrace();
+            e.printStackTrace();
         } finally {
             connection.close();
             if (ps != null) {
@@ -154,8 +155,11 @@ public class DataLoader {
         return count;
     }
 
-    Map<String, String> parseLine(String line) {
+    Map<String, String> parseLine(String line) throws IllegalArgumentException {
         String[] array = line.split("\t");
+        if (array.length < 12) {
+            throw new IllegalArgumentException("Incorrect data");
+        }
         Map<String, String> map = new HashMap<>();
         map.put("countryCode", array[0]);
         map.put("postalCode", array[1]);
